@@ -154,13 +154,13 @@ namespace Vcrmb.Desktop
             // 仅显式测试模式输出状态，并显示任务栏按钮，便于桌面自动化工具发现窗口。
             string json = new System.Web.Script.Serialization.JavaScriptSerializer().Serialize(new {
                 visible = IsVisible, active = IsActive, topmost = Topmost, wordId = session.Current == null ? 0 : session.Current.WordId,
-                input = answer.Text, feedback = feedback.Text, width = ActualWidth, height = ActualHeight,
+                input = answer.Text, feedback = surface.Hint.Text.Length > 0 ? surface.Hint.Text : feedback.Text, width = ActualWidth, height = ActualHeight,
                 dpi = NativeMethods.GetDpiForWindow(new WindowInteropHelper(this).Handle), hotkey = settings.Hotkey,
                 positionLocked = settings.PositionLocked, left = Left, top = Top,
                 hintUsed = session.Current != null && session.Current.HintUsed,
                 background = settings.Backdrop, effectiveBackground = backdrop.EffectiveMode, backdropFailure = backdrop.Failure,
                 backgroundOpacity = settings.BackdropOpacity, darkAppearance = settings.DarkAppearance,
-                feedbackVisible = feedback.IsVisible, inputBorder = answer.BorderThickness.ToString(),
+                feedbackVisible = feedback.IsVisible || (surface.Hint.Text.Length > 0 && meaning.IsVisible), inputBorder = answer.BorderThickness.ToString(),
                 pendingConfirmation = HasActiveRound && AnswerRules.IsCorrect(session.Word, answer.Text)
                     && !AnswerRules.CanAutoComplete(session.Word, answer.Text),
                 groupSize = settings.GroupSize, groupNumber = settings.GroupNumber, groupCount = session.GroupCount,
@@ -192,18 +192,19 @@ namespace Vcrmb.Desktop
                 checkTimer.Stop(); saveTimer.Stop(); nextTimer.Stop(); composing = false;
                 answer.IsReadOnly = false; surface.ClearStatus();
                 meaning.FontSize = settings.FontSize + 1; example.FontSize = settings.FontSize; answer.FontSize = settings.FontSize + 2;
+                surface.Answer.CaretBlinkEnabled = settings.CaretBlinkEnabled;
                 Width = settings.Width; Topmost = settings.Topmost;
                 surface.DragHandle.Cursor = settings.PositionLocked ? Cursors.Arrow : Cursors.SizeAll;
                 if (session.Current == null)
                 {
-                    meaning.Text = "第 " + settings.GroupNumber + " / " + session.GroupCount + " 组" +
-                        (settings.ReviewOnly && session.GroupState.WordIds.Length == 0 ? "暂无到期词" : "已完成");
+                    surface.SetMeaning("第 " + settings.GroupNumber + " / " + session.GroupCount + " 组" +
+                        (settings.ReviewOnly && session.GroupState.WordIds.Length == 0 ? "暂无到期词" : "已完成"));
                     example.Text = "按 " + settings.SkipShortcut + (settings.GroupNumber < session.GroupCount ? " 继续下一组" : " 从第 1 组重新开始") +
-                        "，Ctrl+, 可跳转或重练分组。";
+                        "，" + settings.RestartGroupShortcut + " 重练本组；Ctrl+, 打开设置。";
                     surface.InputRow.Visibility = Visibility.Collapsed;
                     SetFeedback("", false); return;
                 }
-                meaning.Text = session.Word.PartOfSpeech + " " + session.Word.Meaning;
+                surface.SetMeaning(session.Word.PartOfSpeech + " " + session.Word.Meaning);
                 example.Text = session.Word.Cloze;
                 surface.InputRow.Visibility = Visibility.Visible; answer.Text = session.Current.Input ?? ""; answer.CaretIndex = answer.Text.Length;
                 feedbackIsHint = session.Current.HintUsed;
@@ -248,7 +249,10 @@ namespace Vcrmb.Desktop
                     answer.IsReadOnly = true; surface.MarkAnswer(true);
                     nextTimer.Start();
                 }
-                else { session.Error(); surface.MarkAnswer(false); }
+                else
+                {
+                    session.Error(); surface.MarkAnswer(false); ShowAnswer();
+                }
             });
         }
 
@@ -263,8 +267,13 @@ namespace Vcrmb.Desktop
             Guard(delegate
             {
                 SaveCurrent(); session.Hint();
-                feedbackIsHint = true; SetFeedback(string.Join(" / ", session.Word.Answers), false); answer.Focus();
+                ShowAnswer();
             });
+        }
+
+        private void ShowAnswer()
+        {
+            feedbackIsHint = true; SetFeedback(string.Join(" / ", session.Word.Answers), false); answer.Focus();
         }
 
         private void Skip()
@@ -277,6 +286,16 @@ namespace Vcrmb.Desktop
             });
         }
 
+        private void RestartGroup()
+        {
+            Guard(delegate
+            {
+                SaveCurrent(); session.SwitchScope(settings, DateTime.UtcNow, true);
+                // 重练同设置页共用事务；重绘同时取消答对后的延迟切题，避免新一轮跳过首词。
+                RenderRound(); if (IsActive && IsVisible) answer.Focus();
+            });
+        }
+
         private void OnKeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.ImeProcessed) return;
@@ -286,11 +305,13 @@ namespace Vcrmb.Desktop
             bool hide = ShortcutRules.Parse(settings.HideShortcut, false).Matches(virtualKey, modifiers);
             bool hint = ShortcutRules.Parse(settings.HintShortcut, false).Matches(virtualKey, modifiers);
             bool skip = ShortcutRules.Parse(settings.SkipShortcut, false).Matches(virtualKey, modifiers);
-            if (e.IsRepeat && (key == Key.Enter || hide || hint || skip)) { e.Handled = true; return; }
+            bool restart = ShortcutRules.Parse(settings.RestartGroupShortcut, false).Matches(virtualKey, modifiers);
+            if (e.IsRepeat && (key == Key.Enter || hide || hint || skip || restart)) { e.Handled = true; return; }
             if (key >= Key.A && key <= Key.Z) lastTypingKey = key;
             if (hide) { HideAll(); e.Handled = true; }
             else if (hint) { Hint(); e.Handled = true; }
             else if (skip) { Skip(); e.Handled = true; }
+            else if (restart) { RestartGroup(); e.Handled = true; }
             else if (key == Key.Enter && Keyboard.Modifiers == ModifierKeys.None)
             {
                 lastTypingKey = Key.Enter;
@@ -362,6 +383,7 @@ namespace Vcrmb.Desktop
             candidate.HideShortcut = ShortcutRules.Parse(candidate.HideShortcut, false).Text;
             candidate.HintShortcut = ShortcutRules.Parse(candidate.HintShortcut, false).Text;
             candidate.SkipShortcut = ShortcutRules.Parse(candidate.SkipShortcut, false).Text;
+            candidate.RestartGroupShortcut = ShortcutRules.Parse(candidate.RestartGroupShortcut, false).Text;
             string previous = hotkeys.ActiveShortcut;
             candidate.Hotkey = hotkeys.Set(candidate.Hotkey);
             bool scopeChanged = candidate.Chapter != settings.Chapter || candidate.ReviewOnly != settings.ReviewOnly ||

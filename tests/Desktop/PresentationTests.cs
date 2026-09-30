@@ -49,7 +49,7 @@ internal static class PresentationTests
         Run("long cloze large fonts and answer variants stay inside the floating layout", delegate
         {
             PracticeSurface surface = Surface(); surface.Width = 320;
-            surface.Meaning.Text = string.Concat(Enumerable.Repeat("中文释义较长时仍应可读。", 6)); surface.Meaning.FontSize = 19;
+            surface.SetMeaning(string.Concat(Enumerable.Repeat("中文释义较长时仍应可读。", 6))); surface.Meaning.FontSize = 19;
             surface.Example.Text = string.Concat(Enumerable.Repeat("A long example keeps its ______ hidden while the text can be scrolled. ", 8));
             surface.Example.FontSize = 18; surface.Answer.FontSize = 20;
             surface.ShowFeedback("program / programme", false); Layout(surface);
@@ -59,14 +59,22 @@ internal static class PresentationTests
             surface.ClearStatus(); Layout(surface);
             Assert(Find<Button>(surface) == null && Find<Image>(surface) == null, "Floating window still contains a toolbar button or logo.");
             Assert(surface.Answer.ActualWidth > 240, "Input area narrowed unexpectedly.");
+            surface.ShowFeedback("操作未完成：测试保存失败", true); Layout(surface);
+            Assert(surface.Hint.Text == "" && surface.Feedback.Text == "操作未完成：测试保存失败" &&
+                surface.Feedback.TranslatePoint(new Point(), surface).Y >= surface.InputRow.TranslatePoint(new Point(), surface).Y,
+                "Operational errors were lost or appended as answer text.");
+            surface.ShowFeedback("", false); surface.SetMeaning("n. 下一题"); Layout(surface);
+            Assert(surface.Meaning.Text == "n. 下一题" && surface.Hint.Text == "" && surface.Feedback.Text == "", "Previous hint leaked into the next meaning.");
         });
-        Run("light dark clear and prompted states render without a permanent instruction row", delegate
+        Run("light dark clear and inline hints render without a bottom answer row", delegate
         {
             PracticeSurface surface = Surface(); surface.Width = 360; Layout(surface);
             double cleanHeight = surface.ActualHeight;
             Render(surface, "light.png");
             surface.Answer.Text = "atmos"; surface.ShowFeedback("atmosphere", false); Layout(surface);
-            Assert(surface.ActualHeight > cleanHeight && surface.Feedback.Text == "atmosphere", "Answer hint did not open its own row.");
+            Assert(Math.Abs(surface.ActualHeight - cleanHeight) < 1 && surface.Hint.Text == "atmosphere" &&
+                surface.Hint.Parent == surface.Meaning && surface.Feedback.Text == "", "Short hint was not appended inline to the meaning.");
+            Assert(surface.Hint.FontSize == surface.Meaning.FontSize, "Inline answer did not inherit the meaning font size.");
             Render(surface, "hint.png"); surface.ShowFeedback("", false); Layout(surface);
             Assert(Math.Abs(surface.ActualHeight - cleanHeight) < 1, "Hidden prompt still reserves empty space.");
             surface.SetTheme(true, false); surface.Background = new SolidColorBrush(Color.FromRgb(28, 36, 34));
@@ -76,7 +84,7 @@ internal static class PresentationTests
             Assert(surface.Opacity == 1 && surface.Answer.Opacity == 1 && surface.Meaning.Opacity == 1, "Transparency faded foreground text.");
             surface.SetTheme(false, true); Assert(surface.Answer.Foreground == SystemColors.WindowTextBrush, "High contrast not respected.");
             surface = Surface(); surface.Width = 360;
-            surface.Meaning.Text = "n. 水圈；大气中的水汽";
+            surface.SetMeaning("n. 水圈；大气中的水汽");
             surface.Example.Text = "All the water of the earth's surface is included in the ______";
             surface.ShowFeedback("hydrosphere", false); Render(surface, "hint-regression.png");
         });
@@ -93,6 +101,8 @@ internal static class PresentationTests
             Render(preview, "settings.png"); settings.Close();
         });
         GroupSettingsTests.RunAll(Run, args[0]);
+        SubmissionTests.RunAll(Run, args[0]);
+        CaretTests.RunAll(Run, args[0]);
         File.WriteAllText(Path.Combine(args[0], "presentation-test-results.json"), new JavaScriptSerializer().Serialize(new {
             utc = DateTime.UtcNow.ToString("o"), passed = results.Count - failed, failed = failed, tests = results }), Encoding.UTF8);
         Console.WriteLine("Presentation result: " + (results.Count - failed) + " passed, " + failed + " failed.");
@@ -117,8 +127,7 @@ internal static class PresentationTests
         PracticeSurface surface = new PracticeSurface()
             { Background = new SolidColorBrush(Color.FromRgb(244, 248, 246)) };
         System.Windows.Documents.TextElement.SetFontFamily(surface, new FontFamily("Microsoft YaHei UI"));
-        surface.Meaning.FontSize = 15; surface.Example.FontSize = 14;
-        surface.Meaning.Text = "n. 大气层；氛围";
+        surface.SetMeaning("n. 大气层；氛围");
         surface.Example.Text = "The approaching examination created a tense ______ on the campus.";
         return surface;
     }

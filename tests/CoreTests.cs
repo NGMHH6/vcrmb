@@ -124,6 +124,8 @@ internal static class CoreTests
             ShortcutRules.Validate(new AppSettings());
             Reject(delegate { ShortcutRules.Validate(new AppSettings { HintShortcut = "F2" }); });
             Reject(delegate { ShortcutRules.Validate(new AppSettings { HintShortcut = "Ctrl+Alt+Shift+W" }); });
+            foreach (string conflict in new[] { "F1", "F2", "Esc", "Ctrl+Alt+Shift+W", "Ctrl+," })
+                Reject(delegate { ShortcutRules.Validate(new AppSettings { RestartGroupShortcut = conflict }); });
             foreach (string invalid in new[] { "A", "Shift+A", "Ctrl+V", "Ctrl+S", "Ctrl+,", "Alt+F4", "F12", "Ctrl+Ctrl+Q" })
                 Reject(delegate { ShortcutRules.Parse(invalid, false); });
             Reject(delegate { ShortcutRules.Parse("F8", true); });
@@ -134,17 +136,72 @@ internal static class CoreTests
             using (LearningStore store = Store())
             {
                 path = store.DatabasePath; store.Start(Find("breeze"));
-                store.SaveSettings(new AppSettings { Hotkey = "Ctrl+Alt+Q", HintShortcut = "F6", SkipShortcut = "Ctrl+J", HideShortcut = "F8" });
+                store.SaveSettings(new AppSettings { Hotkey = "Ctrl+Alt+Q", HintShortcut = "F6", SkipShortcut = "Ctrl+J", HideShortcut = "F8", RestartGroupShortcut = "Ctrl+R" });
             }
             using (LearningStore store = new LearningStore(path))
             {
                 AppSettings settings = store.LoadSettings();
                 Assert(settings.Hotkey == "Ctrl+Alt+Q" && settings.HintShortcut == "F6" && settings.SkipShortcut == "Ctrl+J" && settings.HideShortcut == "F8", "Shortcut configuration lost.");
+                Assert(settings.RestartGroupShortcut == "Ctrl+R", "Custom restart shortcut did not survive reopening.");
                 Sql(path, "UPDATE settings SET value=@p0 WHERE key='app'", "{\"Hotkey\":\"Ctrl+Alt+Q\",\"FontSize\":16,\"Width\":400,\"FluentGoal\":4}");
                 settings = store.LoadSettings();
                 Assert(settings.Hotkey == "Ctrl+Alt+Q" && settings.FontSize == 16 && settings.Width == 400 && settings.HintShortcut == "F1" && settings.SkipShortcut == "F2" && settings.HideShortcut == "Esc", "Old preferences not preserved.");
                 Assert(settings.Backdrop == "frosted" && settings.BackdropOpacity == 0.65 && !settings.DarkAppearance, "Old settings did not receive safe appearance defaults.");
+                Assert(!settings.CaretBlinkEnabled, "Legacy settings should default to a steady caret.");
+                Assert(settings.RestartGroupShortcut == "F3", "Legacy settings did not receive the default restart shortcut.");
                 Assert(store.LoadActive().WordId == Find("breeze").Id, "Settings affected pending input.");
+            }
+        });
+        Run("legacy restart default avoids occupied keys and survives backup restore without changing existing shortcuts", delegate
+        {
+            using (LearningStore store = Store())
+            {
+                store.SaveSettings(new AppSettings());
+                Sql(store.DatabasePath, "UPDATE settings SET value=@p0 WHERE key='app'",
+                    "{\"Hotkey\":\"Ctrl+Alt+Q\",\"HintShortcut\":\"F3\",\"SkipShortcut\":\"F4\",\"HideShortcut\":\"F5\"}");
+                string legacyBackup = store.DatabasePath + ".legacy"; store.Backup(legacyBackup);
+                AppSettings settings = store.LoadSettings();
+                Assert(settings.RestartGroupShortcut == "F6" && settings.HintShortcut == "F3" && settings.SkipShortcut == "F4" &&
+                    settings.HideShortcut == "F5" && settings.Hotkey == "Ctrl+Alt+Q", "Restart default replaced an existing shortcut.");
+                store.SaveSettings(new AppSettings()); store.Restore(legacyBackup); settings = store.LoadSettings();
+                Assert(settings.RestartGroupShortcut == "F6" && settings.HintShortcut == "F3", "Legacy backup could not restore occupied-key defaults.");
+                settings.RestartGroupShortcut = "Ctrl+R"; store.SaveSettings(settings);
+                string customBackup = store.DatabasePath + ".custom"; store.Backup(customBackup);
+                settings.RestartGroupShortcut = "F7"; store.SaveSettings(settings); store.Restore(customBackup);
+                Assert(store.LoadSettings().RestartGroupShortcut == "Ctrl+R", "Restore lost a custom restart shortcut.");
+                settings.RestartGroupShortcut = "F3"; Reject(delegate { store.SaveSettings(settings); });
+                Assert(store.LoadSettings().RestartGroupShortcut == "Ctrl+R", "Conflicting restart shortcut replaced valid settings.");
+            }
+        });
+        Run("legacy review-only settings and restored backups resume the full group without losing records", delegate
+        {
+            string path, backup;
+            DateTime now = DateTime.UtcNow;
+            using (LearningStore store = Store())
+            {
+                path = store.DatabasePath; backup = path + ".backup";
+                AppSettings settings = new AppSettings { GroupSize = 12, GroupNumber = 4 };
+                LearningSession session = new LearningSession(store, library); session.Next(settings, now);
+                session.SaveInput(session.Word.Answers[0]); session.Complete(true, now); session.Next(settings, now);
+                session.SaveInput("draft"); session.Error();
+                settings.ReviewOnly = true; settings.ReviewDays = new[] { 2, 5, 9 };
+                store.SaveSettings(settings); store.Backup(backup);
+            }
+            using (LearningStore store = new LearningStore(path))
+            {
+                for (int pass = 0; pass < 2; pass++)
+                {
+                    if (pass == 1) store.Restore(backup);
+                    AppSettings settings = store.LoadSettings();
+                    Assert(!settings.ReviewOnly && settings.GroupSize == 12 && settings.GroupNumber == 4,
+                        "Legacy review filter is still active or the selected group changed.");
+                    LearningSession session = new LearningSession(store, library); session.Next(settings, now);
+                    Assert(session.Word.Id == 38 && session.Current.Input == "draft" && session.Current.Errors == 1 &&
+                        session.GroupState.WordIds.Length == 12 && session.GroupState.CompletedWordIds.SequenceEqual(new[] { 37 }),
+                        "Full group, progress or unfinished input changed.");
+                    Assert(store.Statistics().Single(s => s.WordId == 37).Correct == 1 &&
+                        store.Statistics().Single(s => s.WordId == 38).Errors == 1, "Correct or error totals changed.");
+                }
             }
         });
         Run("appearance settings survive restart and reject unknown modes or invalid opacity", delegate
@@ -168,6 +225,25 @@ internal static class CoreTests
                 Assert(store.LoadSettings().Backdrop == "solid", "Invalid preferences replaced valid settings.");
             }
         });
+        Run("caret blinking defaults off and survives settings reload backup and restore", delegate
+        {
+            using (LearningStore store = Store())
+            {
+                AppSettings settings = store.LoadSettings();
+                Assert(!settings.CaretBlinkEnabled, "New settings enable blinking by default.");
+                store.Start(Find("breeze")); LearningSession session = new LearningSession(store, library);
+                session.SaveInput("breez"); session.Error();
+                settings.CaretBlinkEnabled = true; store.SaveSettings(settings);
+                string backup = store.DatabasePath + ".backup"; store.Backup(backup);
+                using (LearningStore reopened = new LearningStore(store.DatabasePath))
+                    Assert(reopened.LoadSettings().CaretBlinkEnabled, "Blinking preference did not survive reopening.");
+                settings.CaretBlinkEnabled = false; store.SaveSettings(settings);
+                Assert(!store.LoadSettings().CaretBlinkEnabled, "Cannot turn blinking back off.");
+                store.Restore(backup);
+                Assert(store.LoadSettings().CaretBlinkEnabled && store.LoadActive().Input == "breez" &&
+                    store.Statistics().Single().Errors == 1, "Restore lost the caret preference or changed learning data.");
+            }
+        });
         Run("successful completion is atomic and idempotent with no completed history row", delegate
         {
             using (LearningStore store = Store())
@@ -188,6 +264,8 @@ internal static class CoreTests
                 Word word = Find("breeze"); store.Start(word); LearningSession session = new LearningSession(store, library);
                 session.SaveInput("breez"); session.Error();
                 Assert(Count(store, word).Errors == 1 && Count(store, word).Correct == 0, "Unfinished error not counted immediately.");
+                Assert(session.Current.HintUsed && store.LoadActive().HintUsed && store.LoadActive().Input == "breez",
+                    "Error submission did not preserve its input and automatic hint.");
                 session.SaveInput("breeze"); Assert(session.Complete(true, DateTime.UtcNow), "Retype failed.");
                 WordStatistics count = Count(store, word);
                 Assert(count.Correct == 1 && count.Errors == 1 && count.Accuracy == 0.5, "Wrong retry ratio.");
@@ -238,9 +316,10 @@ internal static class CoreTests
         {
             using (LearningStore store = Store())
             {
-                Round candidate = store.Start(Find("breeze")); candidate.Input = "br"; candidate.Errors = 1;
+                Round candidate = store.Start(Find("breeze")); candidate.Input = "br"; candidate.Errors = 1; candidate.HintUsed = true;
                 store.RecordError(candidate); store.RecordError(candidate);
-                Assert(Count(store, Find("breeze")).Errors == 1 && store.LoadActive().Errors == 1, "Duplicate error incremented.");
+                Assert(Count(store, Find("breeze")).Errors == 1 && store.LoadActive().Errors == 1 && store.LoadActive().HintUsed,
+                    "Duplicate error incremented or automatic hint lost.");
             }
         });
         Run("failed error transaction rolls back pending input and counters", delegate
@@ -254,6 +333,26 @@ internal static class CoreTests
                 invalid = round.Copy(); invalid.Errors = 2;
                 Reject(delegate { store.RecordError(invalid); });
                 Assert(store.Statistics().Count == 0, "Skipped error number accepted.");
+            }
+        });
+        Run("failed error counter update rolls back the automatic hint and pending error together", delegate
+        {
+            using (LearningStore store = Store())
+            {
+                Word word = Find("breeze"); store.Start(word); LearningSession session = new LearningSession(store, library);
+                session.SaveInput("breez");
+                Sql(store.DatabasePath, "CREATE TRIGGER fail_error BEFORE INSERT ON word_counts BEGIN SELECT RAISE(ABORT,'counter write failed'); END");
+                try
+                {
+                    Reject(delegate { session.Error(); });
+                    Assert(!session.Current.HintUsed && session.Current.Errors == 0 && !store.LoadActive().HintUsed &&
+                        store.LoadActive().Errors == 0 && store.LoadActive().Input == "breez" && store.Statistics().Count == 0,
+                        "Failed submission left a hint, error count or changed input behind.");
+                }
+                finally { Sql(store.DatabasePath, "DROP TRIGGER fail_error"); }
+                session.Error();
+                Assert(store.LoadActive().HintUsed && store.LoadActive().Errors == 1 && Count(store, word).Errors == 1,
+                    "Retry failed to save the hint and error exactly once.");
             }
         });
         Run("chapter switching preserves hinted input and cumulative counters", delegate

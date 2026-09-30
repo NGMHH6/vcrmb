@@ -60,8 +60,8 @@ namespace Vcrmb.Core
 
         public static void Validate(AppSettings settings)
         {
-            string[] names = { "全局显隐", "窗口隐藏", "提示答案", "跳过" };
-            string[] values = { settings.Hotkey, settings.HideShortcut, settings.HintShortcut, settings.SkipShortcut };
+            string[] names = { "全局显隐", "窗口隐藏", "提示答案", "跳过", "重练当前组" };
+            string[] values = { settings.Hotkey, settings.HideShortcut, settings.HintShortcut, settings.SkipShortcut, settings.RestartGroupShortcut };
             var occupied = new Dictionary<string, string>();
             for (int i = 0; i < values.Length; i++)
             {
@@ -71,6 +71,14 @@ namespace Vcrmb.Core
                     throw new ArgumentException(names[i] + "与" + previous + "不能使用同一个快捷键（" + normalized + "）。");
                 occupied.Add(normalized, names[i]);
             }
+        }
+
+        // 仅供旧设置缺少重练键时补默认值；优先 F3，避开四个已有组合，不覆盖用户原配置。
+        internal static string ChooseRestartShortcut(AppSettings settings)
+        {
+            string[] existing = { settings.Hotkey, settings.HideShortcut, settings.HintShortcut, settings.SkipShortcut };
+            var occupied = new HashSet<string>(existing.Select((value, index) => Parse(value, index == 0).Text));
+            return Enumerable.Range(3, 9).Select(number => "F" + number).First(key => !occupied.Contains(key));
         }
     }
 }

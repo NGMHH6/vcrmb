@@ -193,7 +193,7 @@ WHERE id=@p0 AND outcome='active' AND errors=@p4", round.Id, round.Input ?? "", 
         }
         public void Save(Round round) { Atomic(delegate { SaveActive(round); }); }
 
-        /// <summary>每次明确的错误提交立即累计；输入修改、提示和跳过不调用此方法。</summary>
+        /// <summary>原子保存错误次数、输入及提示状态；编辑、主动提示和跳过不增加错误次数。</summary>
         public void RecordError(Round candidate)
         {
             Atomic(delegate
@@ -204,7 +204,8 @@ WHERE id=@p0 AND outcome='active' AND errors=@p4", round.Id, round.Input ?? "", 
                 if (current.Errors == candidate.Errors && current.Input == candidate.Input) return;
                 if (candidate.Errors != current.Errors + 1 || candidate.WordId != current.WordId)
                     throw new InvalidOperationException("错误次数与当前题目不一致。");
-                Execute("UPDATE pending SET errors=@p1,input=@p2 WHERE id=@p0", candidate.Id, candidate.Errors, candidate.Input ?? "");
+                Execute("UPDATE pending SET errors=@p1,input=@p2,hint_used=max(hint_used,@p3) WHERE id=@p0",
+                    candidate.Id, candidate.Errors, candidate.Input ?? "", candidate.HintUsed ? 1 : 0);
                 Execute("INSERT OR IGNORE INTO word_counts(word_id) VALUES(@p0)", candidate.WordId);
                 Execute("UPDATE word_counts SET error_count=error_count+1 WHERE word_id=@p0", candidate.WordId);
             });
@@ -258,6 +259,8 @@ VALUES(@p0,@p1,@p2,@p3,@p4)", round.WordId, state.Streak, Utc(state.DueUtc), sta
             string json = Convert.ToString(Scalar("SELECT value FROM settings WHERE key='app'"));
             AppSettings settings = string.IsNullOrEmpty(json) ? new AppSettings() : new JavaScriptSerializer().Deserialize<AppSettings>(json);
             if (settings == null) throw new InvalidDataException("设置记录损坏。");
+            // 复习筛选入口已移除；启动和恢复旧备份都使用普通分组，旧数据结构继续兼容。
+            settings.ReviewOnly = false;
             settings.FontSize = Math.Min(18, Math.Max(12, settings.FontSize));
             if (double.IsNaN(settings.Width) || double.IsInfinity(settings.Width)) settings.Width = 360;
             settings.Width = Math.Min(560, Math.Max(320, settings.Width));
@@ -268,6 +271,8 @@ VALUES(@p0,@p1,@p2,@p3,@p4)", round.WordId, state.Streak, Utc(state.DueUtc), sta
             if (double.IsNaN(settings.EdgeRight) || double.IsInfinity(settings.EdgeRight)) settings.EdgeRight = 12;
             if (double.IsNaN(settings.EdgeBottom) || double.IsInfinity(settings.EdgeBottom)) settings.EdgeBottom = 12;
             Dictionary<string, object> fields = string.IsNullOrEmpty(json) ? null : new JavaScriptSerializer().DeserializeObject(json) as Dictionary<string, object>;
+            if (fields == null || !fields.ContainsKey("RestartGroupShortcut"))
+                settings.RestartGroupShortcut = ShortcutRules.ChooseRestartShortcut(settings);
             if (fields == null || !fields.ContainsKey("GroupNumber"))
             {
                 // 老版没有组号，升级时定位到未完成词（否则首个未学词）所在组，保留当前输入。
@@ -284,7 +289,7 @@ VALUES(@p0,@p1,@p2,@p3,@p4)", round.WordId, state.Streak, Utc(state.DueUtc), sta
             if (settings == null || settings.ReviewDays == null || settings.ReviewDays.Length == 0 || settings.ReviewDays.Length > 10 ||
                 settings.ReviewDays.Any(d => d < 1 || d > 365) || !settings.ReviewDays.SequenceEqual(settings.ReviewDays.Distinct().OrderBy(d => d)))
                 throw new InvalidDataException("复习间隔应为 1–365 天之间的递增整数，最多 10 段，例如 1, 3, 7, 14。");
-            ShortcutRules.Parse(settings.HintShortcut, false); ShortcutRules.Parse(settings.SkipShortcut, false); ShortcutRules.Parse(settings.HideShortcut, false);
+            ShortcutRules.Validate(settings);
             if (!new[] { "frosted", "clear", "solid" }.Contains(settings.Backdrop) || double.IsNaN(settings.BackdropOpacity) ||
                 double.IsInfinity(settings.BackdropOpacity) || settings.BackdropOpacity < 0.2 || settings.BackdropOpacity > 0.9)
                 throw new InvalidDataException("请选择有效的窗口背景，磨砂浓度应在 20%–90% 之间。");
@@ -412,7 +417,14 @@ VALUES(@p0,@p1,@p2,@p3,@p4)", round.WordId, state.Streak, Utc(state.DueUtc), sta
             using (SQLiteDataReader reader = command.ExecuteReader())
                 while (reader.Read()) DateTime.Parse(reader.GetString(0), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
             string json = Convert.ToString(Inspect(candidate, "SELECT value FROM settings WHERE key='app'"));
-            if (!string.IsNullOrEmpty(json)) ValidateSettings(new JavaScriptSerializer().Deserialize<AppSettings>(json));
+            if (!string.IsNullOrEmpty(json))
+            {
+                AppSettings settings = new JavaScriptSerializer().Deserialize<AppSettings>(json);
+                Dictionary<string, object> fields = new JavaScriptSerializer().DeserializeObject(json) as Dictionary<string, object>;
+                if (settings != null && fields != null && !fields.ContainsKey("RestartGroupShortcut"))
+                    settings.RestartGroupShortcut = ShortcutRules.ChooseRestartShortcut(settings);
+                ValidateSettings(settings);
+            }
             using (SQLiteCommand command = new SQLiteCommand("SELECT key,value FROM settings WHERE key LIKE 'practice/%'", candidate))
             using (SQLiteDataReader reader = command.ExecuteReader())
                 while (reader.Read())

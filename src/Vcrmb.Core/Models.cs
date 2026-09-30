@@ -70,6 +70,7 @@ namespace Vcrmb.Core
         public string Hotkey { get; set; }
         public string HintShortcut { get; set; }
         public string SkipShortcut { get; set; }
+        public string RestartGroupShortcut { get; set; }
         public string HideShortcut { get; set; }
         public bool HasPosition { get; set; }
         public double Left { get; set; }
@@ -78,15 +79,16 @@ namespace Vcrmb.Core
         public string Backdrop { get; set; }
         public double BackdropOpacity { get; set; }
         public bool DarkAppearance { get; set; }
+        public bool CaretBlinkEnabled { get; set; }
         public string Monitor { get; set; }
         public double EdgeRight { get; set; }
         public double EdgeBottom { get; set; }
         public int[] ReviewDays { get; set; }
         public AppSettings()
         {
-            Chapter = ""; Topmost = true; FontSize = 14; Hotkey = "Ctrl+Alt+Shift+W"; Width = 360;
+            Chapter = ""; Topmost = true; FontSize = 16; Hotkey = "Ctrl+Alt+Shift+W"; Width = 360;
             GroupSize = 20; GroupNumber = 1;
-            HintShortcut = "F1"; SkipShortcut = "F2"; HideShortcut = "Esc";
+            HintShortcut = "F1"; SkipShortcut = "F2"; RestartGroupShortcut = "F3"; HideShortcut = "Esc";
             Backdrop = "frosted"; BackdropOpacity = 0.65;
             ReviewDays = new[] { 1, 3, 7, 14 };
         }

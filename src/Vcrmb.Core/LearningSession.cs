@@ -86,7 +86,8 @@ namespace Vcrmb.Core
 
         public void Error()
         {
-            Round candidate = Current.Copy(); candidate.Errors++;
+            // 错误提交与提示状态一起保存，重开窗口仍显示答案；失败时保留原题状态。
+            Round candidate = Current.Copy(); candidate.Errors++; candidate.HintUsed = true;
             store.RecordError(candidate); Current = candidate;
         }
 

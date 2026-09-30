@@ -98,17 +98,12 @@ namespace Vcrmb.Desktop
             GroupPracticeOptions groups = new GroupPracticeOptions(library, settings); panel.Children.Add(groups);
             chapter.SelectionChanged += delegate { groups.SetChapter(chapter.SelectedIndex <= 0 ? "" : (string)chapter.SelectedItem); };
             Button restartGroup = Ui.Button("跳转并从头练习该组", delegate { }); panel.Children.Add(restartGroup);
-            CheckBox review = new CheckBox { Content = "只练习所选组内的到期复习词", IsChecked = settings.ReviewOnly, Margin = new Thickness(0, 8, 0, 12) };
-            panel.Children.Add(review);
             StackPanel choices = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 5, 0, 10) };
             choices.Children.Add(Ui.Text("字号 ", 12));
             ComboBox font = new ComboBox { ItemsSource = new[] { 12, 14, 16, 18 }, SelectedItem = settings.FontSize, Width = 62, Margin = new Thickness(0, 0, 20, 0) };
             choices.Children.Add(font); choices.Children.Add(Ui.Text("宽度 ", 12));
             ComboBox width = new ComboBox { ItemsSource = new[] { 320, 360, 400, 440, 480, 560 }, SelectedItem = (int)settings.Width, Width = 75 };
             choices.Children.Add(width); panel.Children.Add(choices);
-            panel.Children.Add(Ui.Text("复习间隔（天，以逗号分隔）", 12));
-            TextBox intervals = new TextBox { Text = string.Join(", ", settings.ReviewDays), Padding = new Thickness(8, 4, 8, 4), Margin = new Thickness(0, 0, 0, 14) };
-            System.Windows.Automation.AutomationProperties.SetName(intervals, "复习间隔"); panel.Children.Add(intervals);
             CheckBox top = new CheckBox { Content = "保持窗口置顶", IsChecked = settings.Topmost, Margin = new Thickness(0, 4, 0, 8) };
             CheckBox locked = new CheckBox { Content = "锁定窗口位置", IsChecked = settings.PositionLocked, Margin = new Thickness(0, 4, 0, 8) };
             panel.Children.Add(top); panel.Children.Add(locked);
@@ -122,6 +117,10 @@ namespace Vcrmb.Desktop
             System.Windows.Automation.AutomationProperties.SetName(background, "悬浮窗背景"); appearance.Children.Add(background);
             CheckBox dark = new CheckBox { Content = "深色外观（使用浅色文字）", IsChecked = settings.DarkAppearance,
                 Margin = new Thickness(0, 3, 0, 15) }; appearance.Children.Add(dark);
+            CheckBox caretBlink = new CheckBox { Content = "光标闪动", IsChecked = settings.CaretBlinkEnabled,
+                Margin = new Thickness(0, 3, 0, 6) };
+            System.Windows.Automation.AutomationProperties.SetName(caretBlink, "光标闪动"); appearance.Children.Add(caretBlink);
+            appearance.Children.Add(Ui.Text("默认关闭，输入时光标常亮；开启后跟随系统闪烁设置。", 11));
             TextBlock density = Ui.Text("磨砂浓度 " + (settings.BackdropOpacity * 100).ToString("0") + "%", 12); appearance.Children.Add(density);
             Slider opacity = new Slider { Minimum = 20, Maximum = 90, Value = settings.BackdropOpacity * 100,
                 TickFrequency = 5, IsSnapToTickEnabled = true, Margin = new Thickness(0, 4, 0, 10), IsEnabled = background.SelectedIndex == 0 };
@@ -129,7 +128,7 @@ namespace Vcrmb.Desktop
             opacity.ValueChanged += delegate { density.Text = "磨砂浓度 " + opacity.Value.ToString("0") + "%"; };
             background.SelectionChanged += delegate { opacity.IsEnabled = background.SelectedIndex == 0; };
             appearance.Children.Add(Ui.Text("全透明会去掉背景，只保留释义、例句和输入文字。深色桌面可选择深色外观，让浅色文字更清楚。", 12));
-            appearance.Children.Add(Ui.Text("悬浮窗没有图标和工具栏，拖动中文释义可移动。输入区没有方框，按提示快捷键才显示答案。", 12));
+            appearance.Children.Add(Ui.Text("悬浮窗没有图标和工具栏，拖动中文释义可移动。输入区没有方框，主动提示或回车答错时显示答案。", 12));
 
             StackPanel shortcuts = new StackPanel { Margin = new Thickness(14, 10, 14, 8) };
             tabs.Items.Add(new TabItem { Header = "快捷键", Content = new ScrollViewer { Content = shortcuts, VerticalScrollBarVisibility = ScrollBarVisibility.Auto } });
@@ -138,13 +137,16 @@ namespace Vcrmb.Desktop
             ShortcutRecorder hide = AddShortcut(shortcuts, "窗口隐藏", settings.HideShortcut, false, captureChanged, report);
             ShortcutRecorder hint = AddShortcut(shortcuts, "提示", settings.HintShortcut, false, captureChanged, report);
             ShortcutRecorder skip = AddShortcut(shortcuts, "跳过 / 下一组", settings.SkipShortcut, false, captureChanged, report);
+            ShortcutRecorder restartShortcut = AddShortcut(shortcuts, "重练当前组", settings.RestartGroupShortcut, false, captureChanged, report);
             shortcuts.Children.Add(Ui.Text("只有全局显隐在其他软件中生效。其余快捷键在练习窗内使用；提示会直接显示完整答案。", 11));
-            shortcuts.Children.Add(Ui.Text("Enter 检查拼写 · Ctrl+, 打开设置 · Ctrl+S 查看学习记录。退出程序可在设置页或托盘完成。", 11));
-            shortcuts.Children.Add(Ui.Text("录入时暂停全局显隐，离开录入框即恢复。Enter 检查、Ctrl+S 学习记录和 Ctrl+, 设置保持固定。", 11));
+            shortcuts.Children.Add(Ui.Text("重练从本组第一个词开始，清空本轮进度和输入，保留累计正确、错误次数。", 11));
+            shortcuts.Children.Add(Ui.Text("Enter 提交拼写 · Ctrl+, 打开设置 · Ctrl+S 查看学习记录。退出程序可在设置页或托盘完成。", 11));
+            shortcuts.Children.Add(Ui.Text("录入时暂停全局显隐，离开录入框即恢复。Enter 提交、Ctrl+S 学习记录和 Ctrl+, 设置保持固定。", 11));
             shortcuts.Children.Add(Ui.Button("恢复默认快捷键", delegate
             {
                 AppSettings defaults = new AppSettings(); hotkey.Text = defaults.Hotkey; hide.Text = defaults.HideShortcut;
-                hint.Text = defaults.HintShortcut; skip.Text = defaults.SkipShortcut; report("已恢复默认快捷键，保存后生效。");
+                hint.Text = defaults.HintShortcut; skip.Text = defaults.SkipShortcut; restartShortcut.Text = defaults.RestartGroupShortcut;
+                report("已恢复默认快捷键，保存后生效。");
             }));
 
             Grid recordPanel = new Grid { Margin = new Thickness(14, 10, 14, 8) };
@@ -200,13 +202,14 @@ namespace Vcrmb.Desktop
                         new System.Web.Script.Serialization.JavaScriptSerializer().Serialize(settings));
                     result.Chapter = chapter.SelectedIndex <= 0 ? "" : (string)chapter.SelectedItem;
                     groups.ApplyTo(result);
-                    result.ReviewOnly = review.IsChecked == true; result.Topmost = top.IsChecked == true;
+                    result.ReviewOnly = false; result.Topmost = top.IsChecked == true;
                     result.PositionLocked = locked.IsChecked == true; result.Hotkey = hotkey.Text;
                     result.HideShortcut = hide.Text; result.HintShortcut = hint.Text; result.SkipShortcut = skip.Text;
-                    result.FontSize = Convert.ToInt32(font.SelectedItem ?? 14); result.Width = Convert.ToDouble(width.SelectedItem ?? 360);
+                    result.RestartGroupShortcut = restartShortcut.Text;
+                    result.FontSize = Convert.ToInt32(font.SelectedItem ?? new AppSettings().FontSize); result.Width = Convert.ToDouble(width.SelectedItem ?? 360);
                     result.Backdrop = background.SelectedIndex == 1 ? "clear" : background.SelectedIndex == 2 ? "solid" : "frosted";
                     result.BackdropOpacity = opacity.Value / 100; result.DarkAppearance = dark.IsChecked == true;
-                    result.ReviewDays = intervals.Text.Replace('，', ',').Split(',').Select(s => int.Parse(s.Trim())).ToArray();
+                    result.CaretBlinkEnabled = caretBlink.IsChecked == true;
                     LearningStore.ValidateSettings(result);
                     apply(result, restart); DialogResult = true;
                 });

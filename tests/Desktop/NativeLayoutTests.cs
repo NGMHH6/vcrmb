@@ -21,8 +21,7 @@ internal static class NativeLayoutTests
         foreach (string mode in new[] { "frosted", "clear", "solid" })
         {
             PracticeSurface surface = new PracticeSurface();
-            surface.Meaning.FontSize = 15; surface.Example.FontSize = 14;
-            surface.Meaning.Text = "n. 水圈；大气中的水汽";
+            surface.SetMeaning("n. 水圈；大气中的水汽");
             surface.Example.Text = "All the water of the earth's surface is included in the ______.";
             Window window = new Window { Content = surface, Width = 360, MinHeight = 96, MaxHeight = 390,
                 SizeToContent = SizeToContent.Height, WindowStyle = WindowStyle.None, ResizeMode = ResizeMode.NoResize,
@@ -72,12 +71,14 @@ internal static class NativeLayoutTests
         finally { DeleteObject(region); }
         int width = bounds.Right - bounds.Left, height = bounds.Bottom - bounds.Top;
         double scale = NativeMethods.GetDpiForWindow(handle) / 96.0;
-        double feedbackBottom = surface.Feedback.TranslatePoint(new Point(0, surface.Feedback.ActualHeight), surface).Y * scale;
+        bool hintVisible = surface.Hint.Text.Length > 0;
+        Rect hintEnd = hintVisible ? surface.Hint.ContentEnd.GetCharacterRect(System.Windows.Documents.LogicalDirection.Backward) : Rect.Empty;
+        double feedbackBottom = hintEnd.IsEmpty ? 0 : surface.Meaning.TranslatePoint(hintEnd.BottomRight, surface).Y * scale;
         bool fits = clip.Right >= width && clip.Bottom >= height && clip.Right <= width + 1 && clip.Bottom <= height + 1;
-        bool hintFits = !surface.Feedback.IsVisible || (surface.Feedback.ActualHeight > 10 && feedbackBottom <= clip.Bottom - 1);
+        bool hintFits = !hintVisible || (!hintEnd.IsEmpty && hintEnd.Height > 10 && feedbackBottom > 0 && feedbackBottom <= clip.Bottom - 1);
         bool widthFits = Math.Abs(width - expectedWidth * scale) <= 1;
         measurements.Add(new { mode = mode, phase = phase, width = width, height = height, regionWidth = clip.Right,
-            regionHeight = clip.Bottom, feedbackBottom = feedbackBottom, feedbackVisible = surface.Feedback.IsVisible,
+            regionHeight = clip.Bottom, feedbackBottom = feedbackBottom, feedbackVisible = hintVisible,
             fits = fits, hintFits = hintFits, expectedWidth = expectedWidth, widthFits = widthFits });
         if (!fits) failures.Add(mode + "/" + phase + " HWND=" + width + "x" + height + " region=" + clip.Right + "x" + clip.Bottom);
         if (!hintFits) failures.Add(mode + "/" + phase + " hint clipped at " + feedbackBottom + " / " + clip.Bottom);
