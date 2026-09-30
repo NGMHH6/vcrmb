@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="256" height="256">
+  <title>小词窗 — 窗口与 W</title>
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="#176B60" />
+  <path d="M 19 17 H 45" fill="none" stroke="#ADE5D5" stroke-width="3" stroke-linecap="round" />
+  <path d="M 17 28 L 24 45 L 32 31 L 40 45 L 47 28" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

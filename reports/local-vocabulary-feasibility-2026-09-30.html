@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>本地单词拼写软件 · 实施可行性报告</title>
+<style>
+  :root{color-scheme:light;--ink:#19252c;--muted:#5c6a73;--line:#dbe2e5;--accent:#176a63;--soft:#edf5f3;--paper:#fff}
+  *{box-sizing:border-box} body{margin:0;background:#f4f6f7;color:var(--ink);font:15px/1.85 "Microsoft YaHei","Segoe UI",sans-serif}
+  main{max-width:1080px;margin:36px auto;background:var(--paper);padding:48px 60px;border:1px solid var(--line)}
+  h1{font-size:30px;line-height:1.4;margin:8px 0 16px;letter-spacing:.02em} h2{font-size:21px;line-height:1.5;margin:42px 0 16px;border-bottom:1px solid var(--line);padding-bottom:10px} h3{font-size:16px;margin:24px 0 8px}
+  p{margin:10px 0 16px} a{color:var(--accent);text-underline-offset:3px;overflow-wrap:anywhere} strong{font-weight:650} code{font:13px/1.6 Consolas,monospace;background:#f0f3f4;padding:2px 5px;border-radius:3px;overflow-wrap:anywhere}
+  .meta,.small{font-size:12px;color:var(--muted)} .meta{letter-spacing:.025em} .lead{font-size:18px;line-height:1.8} .callout{border-left:3px solid var(--accent);background:var(--soft);padding:13px 18px;margin:20px 0} .callout p{margin:0}
+  .nav{display:flex;flex-wrap:wrap;gap:6px 22px;padding:16px 0;border-bottom:1px solid var(--line);font-size:13px} .nav a{text-decoration:none}
+  .table-wrap{overflow-x:auto;margin:16px 0} table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.8} th{text-align:left;background:#f1f5f5;color:#34464e;font-weight:600} td,th{padding:11px 12px;border:1px solid var(--line);vertical-align:top} td:first-child{min-width:110px} .recommended{background:#f2f8f6}
+  ul,ol{padding-left:24px;margin:10px 0 18px} li{margin:7px 0} .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin:22px 0} .metric{border-bottom:2px solid #8eb8b1;padding:10px 0} .metric b{font-size:29px;display:block;line-height:1.5;color:var(--accent)} .metric span{font-size:12px;color:var(--muted)}
+  .preview{display:flex;gap:34px;align-items:center;background:#f3f5f6;border:1px solid var(--line);padding:26px;margin:20px 0} .preview-text{flex:1;font-size:13px;color:var(--muted)} .desktop-sample{flex:0 0 auto;padding-top:4px}
+  .mini-window{width:360px;min-height:156px;background:#fafafa;border:1px solid #bfc8cd;box-shadow:0 5px 15px #17272d13;padding:10px 12px;font-size:13px;line-height:1.5}
+  .grip{height:7px;width:28px;margin:0 auto 4px;border-top:2px solid #ccd2d4} .meaning{font-size:14px;font-weight:600;margin:0 0 5px} .example{margin:0 0 10px;line-height:1.55;font-family:"Segoe UI",sans-serif;color:#48565d;min-height:38px} .cloze{display:inline-block;min-width:46px;letter-spacing:1px;color:#647b76;font-weight:600} .input-look{border:1px solid #aebfc2;border-radius:3px;background:white;line-height:28px;height:30px;padding:0 8px;color:#8b969a;font-size:12px} .window-bottom{display:flex;justify-content:space-between;font-size:10px;color:#73818a;margin-top:6px} .taskbar-look{margin-top:8px;background:#dde2e5;height:28px;display:flex;justify-content:space-between;align-items:center;padding:0 10px;font-size:10px;color:#707b82}
+  .tag{display:inline-block;padding:1px 7px;background:#e8f2ef;color:#286e61;border-radius:3px;font-size:12px} .note{color:var(--muted);font-size:13px} .check{color:var(--accent);font-weight:600} footer{border-top:1px solid var(--line);margin-top:35px;padding-top:16px;font-size:12px;color:var(--muted)}
+  @media(max-width:760px){main{margin:0;border:0;padding:25px 20px} h1{font-size:25px} .metrics{grid-template-columns:repeat(2,1fr)} .preview{flex-direction:column;align-items:stretch;padding:14px;gap:16px}.desktop-sample{max-width:100%}.mini-window{width:100%}.preview-text{font-size:12px} td,th{padding:9px} table{min-width:570px}}
+  @media print{body{background:white;font-size:11pt}main{border:0;margin:0;max-width:none;padding:0}.nav{display:none}h2{break-after:avoid;margin-top:26px}h3{break-after:avoid}.preview,.metrics,tr,.callout{break-inside:avoid}.table-wrap{overflow:visible}table{font-size:9pt}a{color:#235c58} .preview{padding:16px} .mini-window{box-shadow:none} @page{size:A4;margin:17mm}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="meta">调研日期：2026-09-30 · 目标：Windows 本地个人使用 · 状态：方案调研，尚未开发桌面软件</div>
+  <h1>本地单词拼写软件<br>实施可行性报告</h1>
+  <p class="lead"><strong>可以实现。推荐“贴近任务栏的小型置顶窗口 + 托盘入口 + 全局隐藏快捷键”，采用 C# / WPF / SQLite。</strong>核心功能没有明显技术阻碍；真正需要先验证的是窗口焦点与隐藏体验，以及例句遮词和词库质量。</p>
+  <p>本报告按“当前这台 Windows 电脑、单用户、离线练习、不需要账号和服务器”评估。当前环境实测为 Windows 10 x64，版本号 10.0.19045；工作目录为空，没有需要沿用的现有应用架构。“重新输出”按答错后重新输入理解。</p>
+  <nav class="nav" aria-label="报告目录"><a href="#form">窗口形态</a><a href="#interaction">练习交互</a><a href="#data">词库审计</a><a href="#stack">技术选型</a><a href="#statistics">统计设计</a><a href="#delivery">实施与验收</a><a href="#evidence">证据与边界</a></nav>
+</header>
+
+<section id="form">
+<h2>1. 小窗口可行，任务栏内嵌不适合作为首版目标</h2>
+<p>“固定在任务栏”有三种不同含义：固定一个启动图标、在任务栏旁显示独立窗口、把输入框真正嵌进任务栏。你的需求需要持续展示中文、例句和输入框，第二种最适合。</p>
+<div class="table-wrap"><table>
+<thead><tr><th>形式</th><th>能否满足练习</th><th>实现代价与判断</th></tr></thead>
+<tbody>
+<tr class="recommended"><td><strong>任务栏旁的小窗口</strong><br><span class="tag">首选</span></td><td>中文、遮词例句、输入框完整可见；可拖动、置顶和隐藏</td><td>使用普通桌面窗口即可。位置可固定在任意屏幕边缘，不需要改造系统任务栏。</td></tr>
+<tr><td>托盘图标 + 弹出窗口</td><td>适合作为隐藏后的入口；点击或快捷键打开同一个练习窗口</td><td>托盘本身只能承担入口，不适合直接放完整例句和可编辑输入框。</td></tr>
+<tr><td>真正嵌入任务栏</td><td>Windows 10 的旧 DeskBand 技术可研究；可用高度也偏紧</td><td>需处理 Shell / COM 集成，任务栏内嵌依赖这套旧接口；Windows 11 又限制任务栏区域自定义，不宜承诺为稳定通用方案。</td></tr>
+<tr><td>独立屏幕停靠栏<br>AppBar</td><td>可固定在屏幕边缘，但不是嵌入现有任务栏</td><td>会保留一块桌面工作区，影响其他窗口的可用面积；对小型练习窗收益有限。</td></tr>
+</tbody></table></div>
+<p class="small">依据：<a href="https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nn-shobjidl_core-ideskband">IDeskBand</a>、<a href="https://learn.microsoft.com/en-us/windows/win32/shell/band-objects">DeskBand 的 Shell / COM 实现</a>、<a href="https://www.microsoft.com/en-us/windows/windows-11-specifications">Windows 11 功能变更</a>、<a href="https://learn.microsoft.com/en-us/windows/win32/shell/application-desktop-toolbars">AppBar 工作区机制</a>。这里评价的是官方接口路线；没有把修改 Explorer 的第三方方案作为交付依赖。</p>
+
+<div class="preview">
+  <div class="desktop-sample">
+    <div class="mini-window" role="img" aria-label="练习窗口示意，显示微风和遮词例句，下方为输入区域">
+      <div class="grip"></div>
+      <div class="meaning">n. 微风；和风</div>
+      <div class="example">A gentle <span class="cloze">______</span> came through the window.</div>
+      <div class="input-look">输入单词原形</div>
+      <div class="window-bottom"><span>提示 F1</span><span>Esc 隐藏</span></div>
+    </div>
+    <div class="taskbar-look"><span>Windows 任务栏位置示意</span><span>托盘入口　　09:41</span></div>
+  </div>
+  <div class="preview-text"><strong>建议起始尺寸：360 × 156 DIP</strong><br>100% 缩放下约等于同数值像素；125% 缩放下约 450 × 195 物理像素。示意只用于讨论信息密度，尚未做桌面原型。<br><br>长释义或长例句允许展开至约 220 DIP 高。默认不展示英文词头、统计大面板和词库列表。此处例句为报告自拟。</div>
+</div>
+<p>默认靠右下角、位于任务栏上方，拖动后记住显示器与边缘偏移；“锁定位置”与“置顶”分别设置。多屏拔插、显示缩放变化或原显示器不存在时，自动回到可见工作区。隐藏时保留当前题目和已输入内容，同时暂停计时。</p>
+<p><strong>置顶不等于抢焦点。</strong>在工作窗口输入时，练习窗只保持可见；点击练习窗或主动按呼出快捷键后，才把焦点交给输入框。隐藏后尝试回到原工作窗口，具体体验必须用真实办公软件验证。置顶也不能保证覆盖安全桌面、锁屏或所有独占全屏场景。窗口基础能力由 <a href="https://learn.microsoft.com/en-us/dotnet/api/system.windows.window.topmost">WPF Topmost</a> 和 <a href="https://learn.microsoft.com/en-us/dotnet/api/system.windows.window.showintaskbar">ShowInTaskbar</a> 提供。</p>
+</section>
+
+<section id="interaction">
+<h2>2. 练习流程：减少操作，同时避免误判</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>环节</th><th>建议行为</th><th>需要明确的边界</th></tr></thead>
+<tbody>
+<tr><td>出题</td><td>只展示中文释义、可选词性、遮住目标词的英文例句和输入框</td><td>遮空使用固定宽度，字母数由提示功能展示。训练词条原形；例句中即使使用复数或过去式，也遮住完整表面形式，避免误以为必须按句子填变形。</td></tr>
+<tr><td>输入正确</td><td>完整匹配允许答案后，短暂确认并自动进入下一词；不额外点击“下一题”</td><td>只有在输入法组合结束后判定。切题必须清理旧输入事件，避免旧词尾字符进入下一题。</td></tr>
+<tr><td>输入错误</td><td>输入过程中不把尚未写完当作错误；按 Enter 明确提交错误答案后，显示轻量提示，留在当前题</td><td>保留输入供修改；Ctrl+A 后可直接重输，不弹模态对话框，不强行清空。</td></tr>
+<tr><td>逐级提示</td><td>F1 依次显示字母数、首字母、更多字母；“显示答案”单独提供</td><td>使用任何提示都记录；看过答案后重输记为辅助练习，并安排再次复习。</td></tr>
+<tr><td>隐藏 / 恢复</td><td>全局快捷键隐藏或呼出；Esc 只在练习窗内生效；托盘可恢复和退出</td><td>默认组合可设为 Ctrl+Alt+W，并允许修改。冲突时明确提示注册失败，保留托盘入口。</td></tr>
+<tr><td>不会 / 跳过</td><td>跳过进入待复习队列；允许稍后再练</td><td>记作未完成或跳过，不计为正确，也不阻塞整轮练习。</td></tr>
+</tbody></table></div>
+<p class="small">全局快捷键使用 <a href="https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerhotkey">RegisterHotKey</a>，不需要监听所有键盘输入。该 API 会报告部分占用冲突；普通字母只由有焦点的练习输入框接收。托盘可用 <a href="https://learn.microsoft.com/en-us/dotnet/api/system.windows.forms.notifyicon">NotifyIcon</a>。</p>
+
+<div class="callout"><p><strong>自动切题存在一个需要定稿的真实取舍。</strong>词库中有 8 组“短答案是长答案前缀”的组合，例如 <code>program / programme</code>、<code>lab / laboratory</code>。若在短答案匹配时立即切题，会打断正在输入长答案的人。建议普通词自动切题，这类歧义词在短答案处等待 Enter，长答案完整匹配时自动切题。若要求所有答案都绝对零确认，只能采用停顿延时等启发式，并接受可能提前切题；无法仅凭同一段输入确定用户是否还会继续打字。</p></div>
+<p>这一条是交互方案建议，实施前应明确取舍，不把它隐藏为“已经完全解决”。答对反馈可先设为约 150–250 ms，再实测快速连续输入和按键重复；性能数字是设计目标，不是本次测试结果。</p>
+<p><strong>答案比较采用确定规则：</strong>处理首尾空格、全角字符和大小写；短语内部连续空格可合并。保留有意义的空格、连字符与撇号。英美拼写和缩写仅接受词条明确列出的形式，不能把相近词或同义词自动算对；需要区分大小写的词条可单独标记。</p>
+</section>
+
+<section id="data">
+<h2>3. 词库可以导入，例句必须加工</h2>
+<p>已读取你引用的《提取单词列表》会话，并重新下载、解析它指向的 <a href="https://github.com/hefengxian/my-ielts">hefengxian/my-ielts</a> 主词库。此次固定仓库提交为 <code>5cef573933663c4673c6e0093f1df04e68018b1a</code>，提交日期为 2026-08-17；统计以该快照为准，不把源书总词数或网页宣传数字当作实际数据量。</p>
+<div class="metrics">
+  <div class="metric"><b>3,674</b><span>词条，按词义与来源条目计数</span></div>
+  <div class="metric"><b>22 / 980</b><span>章节 / 逻辑词群</span></div>
+  <div class="metric"><b>70</b><span>含多个允许拼写的词条</span></div>
+  <div class="metric"><b>755</b><span>例句不能直接匹配词条原形</span></div>
+</div>
+<div class="table-wrap"><table>
+<thead><tr><th>本次实测</th><th>结果</th><th>对实现的影响</th></tr></thead>
+<tbody>
+<tr><td>基本完整性</td><td>词条 ID 无缺失、无重复；中文释义无空值；章节声明数量与实际一致</td><td>可以建立稳定来源映射；不代表释义语义已逐条校对。</td></tr>
+<tr><td>拼写与重复</td><td>共 3,744 个允许答案形式；去首尾空格、转小写后为 3,697 种</td><td>同形词可能有不同义项，不能只按英文去重后覆盖中文和章节。进度默认以 3,674 个词条为分母。</td></tr>
+<tr><td>多词与连字符</td><td>11 个词条含空格，17 个含连字符</td><td>例如 carbon dioxide 必须作为一个完整练习答案；不能按空格拆词。</td></tr>
+<tr><td>例句覆盖</td><td>3,670 条非空；4 条为空</td><td>缺失的是 extinction、assume、strive、propel。正式全量包需补齐并标记补充来源。</td></tr>
+<tr><td>遮词初筛</td><td>2,919 条能用英文边界、忽略大小写匹配任一原形；755 条不能，包含上面的 4 条空例句</td><td>755 不等于 755 条错句；主要可能是屈折变形、拼写问题或不同表达，需要继续分类。</td></tr>
+<tr><td>例句长度</td><td>中位数 48 字符，最大 137 字符；数据文件 858,988 字节，约 0.82 MiB</td><td>总体适合本地小窗口；长句仍需要换行或展开。文本容量不是主要性能瓶颈。</td></tr>
+</tbody></table></div>
+<p class="small">以上为本次脚本对 <a href="https://github.com/hefengxian/my-ielts/blob/5cef573933663c4673c6e0093f1df04e68018b1a/src/pages/vocabulary/vocabulary.js">固定版本 vocabulary.js</a> 的结构与字面匹配统计。审计规则、章节数量和异常 ID 保存在本报告同目录的 <a href="vocabulary-audit-2026-09-30.json">审计记录 JSON</a>，不是来自模型估计。</p>
+
+<p><strong>直接显示原例句会泄露答案。</strong>导入时应生成单独的遮词版本，处理同词重复出现、英美变体、复数、过去式和不规则变形，并保存已确认的遮词位置。规则不能可靠识别的条目进入校对清单；正式交付前补齐例句，不能在软件中长期静默隐藏这些词来降低验收标准。</p>
+<p>已经发现具体校对线索：<code>volcano</code> 的例句出现 <code>valcano</code>；<code>breeze</code> 的释义写为“微分；和风”。另外，<code>jeopardise</code> 在例句中使用 <code>jeopardised</code>。这些分别说明了录入错误与正常词形变化，两者不能一概自动改写。即使原形匹配成功，也仍需检查例句其他位置是否透露目标词。</p>
+<p><strong>导入数据保留：</strong>来源仓库与提交、原始 ID、章节、词群、允许答案数组、词性、中文释义、原始例句、遮词例句、额外说明及校对状态。学习进度另存，更新词库时按稳定来源 ID 对齐；不导入原项目里的 <code>spellValue</code>、<code>spellError</code> 等页面状态。导入器只读取受校验的数据文件，不执行用户提供的 JavaScript。</p>
+<p>原项目 <a href="https://github.com/hefengxian/my-ielts/blob/5cef573933663c4673c6e0093f1df04e68018b1a/README.md#禁止将本项目用于任何商业目的">README 明确限制商业用途</a>，根目录本次也未发现独立 LICENSE 文件。技术提取可行不等于取得内容分发许可；本地导入功能可先做，若要把书籍词库打包公开或商业发布，需要先确认相关授权。这是内容发布条件，不影响桌面技术方案的判断。</p>
+</section>
+
+<section id="stack">
+<h2>4. 技术选型：当前电脑优先 WPF</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>候选路线</th><th>适配本需求的优势</th><th>主要代价</th><th>建议</th></tr></thead>
+<tbody>
+<tr class="recommended"><td><strong>C# + WPF + SQLite</strong></td><td>原生文本输入、窗口控制、Win32 快捷键互操作；可不引入浏览器渲染进程</td><td>主要面向 Windows；需要 C# / XAML 工具链</td><td>本机个人版首选</td></tr>
+<tr><td>Tauri 2 + Vue + SQLite</td><td>适合已有前端经验、后续考虑跨平台；提供托盘和快捷键能力</td><td>需要 Rust / WebView2；特殊窗口与焦点行为仍需平台验证，安装包小不等于总内存一定小</td><td>跨平台成为明确目标时再优先考虑</td></tr>
+<tr><td>Electron</td><td>前端实现直接，桌面 API 丰富</td><td>随应用带 Chromium / Node.js，并采用多进程架构；对这样的小型常驻界面，引入的基础运行组件较多</td><td>可行，但不作为首选</td></tr>
+<tr><td>纯浏览器网页</td><td>容易快速展示练习逻辑</td><td>不能仅靠普通页面可靠满足系统级置顶、后台全局快捷键、托盘和精确桌面定位这一整组要求</td><td>仅用于界面讨论或核心逻辑演示</td></tr>
+</tbody></table></div>
+<p class="small">官方依据：<a href="https://learn.microsoft.com/en-us/dotnet/desktop/wpf/overview/">WPF</a>、<a href="https://v2.tauri.app/learn/system-tray/">Tauri 托盘</a>、<a href="https://v2.tauri.app/plugin/global-shortcut/">Tauri 全局快捷键</a>、<a href="https://v2.tauri.app/distribute/windows-installer/">Tauri Windows 分发</a>、<a href="https://www.electronjs.org/docs/latest/tutorial/process-model">Electron 进程模型</a>。排序是结合当前需求作出的工程判断；本次没有运行三种框架的资源基准测试。</p>
+
+<p><strong>运行时建议：本机首版以 .NET Framework 4.8 为兼容基线。</strong>注册表检测到已有 4.8 系列运行时，Release 值为 533325；微软兼容表列出 Windows 10 22H2 和 Windows 11 对该系列的支持。开发时仍需要兼容的构建工具与 targeting pack，已有运行时不等于已有 SDK。采用这一基线是为了匹配你当前的本地环境，不是把它作为所有新项目的默认选择。<a href="https://learn.microsoft.com/en-us/dotnet/framework/get-started/system-requirements">兼容与安装要求</a></p>
+<p>现代 .NET 10 是可选迁移路线，但截至本次调研，它的官方 OS 支持表没有列出这台机器对应的 Windows 10 22H2，不能仅凭“.NET 10 是 LTS”就承诺当前系统属于受支持组合。此处区分技术兼容性与厂商支持周期；当前 Windows 的更新 / ESU 状态未核实。<a href="https://raw.githubusercontent.com/dotnet/core/main/release-notes/10.0/supported-os.md">.NET 10 支持清单</a>、<a href="https://dotnet.microsoft.com/en-us/platform/support/policy">.NET 生命周期</a></p>
+
+<h3>本地结构保持简单</h3>
+<p>一个桌面进程即可：窗口负责展示与输入；练习逻辑负责判词、提示和选题；数据层负责词库、答题事件和复习状态。SQLite 使用兼容目标框架的驱动并锁定版本，不需要 Java 服务、MySQL、Redis 或云端接口。微软提供 <a href="https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/">Microsoft.Data.Sqlite</a> 这一轻量数据访问方式，具体版本在实施时核对目标框架。</p>
+<p>默认把学习数据库放入当前用户的本地应用数据目录，程序文件与进度分开；导入新词库不得覆盖学习历史。每次提交用事务同步写入答题事件和词条状态，失败时留在当前题并提示保存失败；切题只记一次，防止重复按键重复计数。提供导出 / 导入备份，备份须使用 SQLite 正确的在线备份或关闭连接后复制，避免遗漏未合并的日志数据。</p>
+<p>首版以 x64 解压运行包交付，不自动设置开机启动。普通用户目录内的数据读写与窗口功能按免管理员运行设计；公司终端若有应用白名单，仍需在实际电脑验证允许启动。静态词库和练习记录全在本地，运行中不需要联网；提示也不依赖在线 AI。</p>
+</section>
+
+<section id="statistics">
+<h2>5. 统计应区分独立答对、提示后答对和重输</h2>
+<p>统计在独立窗口展示，通过托盘菜单打开，保持练习窗口紧凑。记录每次“出题”、明确的错误提交、提示、答案揭示、跳过、最终结果和有效练习时间；不把每次按键都当成一次答题。</p>
+<div class="table-wrap"><table>
+<thead><tr><th>指标</th><th>建议口径</th></tr></thead>
+<tbody>
+<tr><td>今日完成量</td><td>分别展示已完成题次、涉及的不同词条数、新词数、复习数。一个词反复重输，不增加不同词条数。</td></tr>
+<tr><td>首次无提示正确率</td><td>本轮首次尝试正确、此前无错误提交且未使用提示的题次 ÷ 已结束题次；跳过进入分母，仍未结束的题次不进入。原始键入中的退格修改不单独算错误提交。</td></tr>
+<tr><td>辅助与错误情况</td><td>显示提示后答对、揭示答案后重输、错误提交次数与高频错词；错误之后最终写对不能回写为首次正确。</td></tr>
+<tr><td>有效练习时间</td><td>只在练习窗有焦点且近期有练习活动时累计；隐藏、失焦和长时间无操作暂停。初始空闲阈值可设为 30 秒，恢复输入时不补计空档。</td></tr>
+<tr><td>进度与复习</td><td>未见 / 学习中 / 待复习 / 达到自设熟练标准分开统计。一次答对只代表本题完成，不直接标记长期掌握。</td></tr>
+</tbody></table></div>
+<p>首版采用可解释的简单队列：到期复习优先，再取选定章节的新词；错词和看过答案的词间隔若干题后重现。跨日间隔可先用可配置的 1、3、7、14 天作为产品起点，失败则缩短间隔；这些数值不是经本次验证的最佳记忆方案。无需为首版引入复杂推荐系统。</p>
+<p>数据至少区分词条、学习状态、出题记录与作答事件，保留本地日期 / 时区用于日统计。隐藏不是跳过；崩溃恢复后继续当前题，不把中断算错，也不重复累加已经提交的结果。</p>
+</section>
+
+<section id="delivery">
+<h2>6. 实施顺序与验收条件</h2>
+<p>建议先解决影响体验的桌面行为，再接全量词库。以下是一个熟悉 Windows 桌面开发的开发者的粗略人日估算，不是交付承诺；不包含全书语义级人工审校，也不包含多平台、公开分发签名和内容授权办理。</p>
+<div class="table-wrap"><table>
+<thead><tr><th>阶段</th><th>产物与通过条件</th><th>估算</th></tr></thead>
+<tbody>
+<tr><td>① 桌面体验验证</td><td>用少量样例做 360 DIP 级小窗；验证置顶、拖动锁定、热键显隐、焦点恢复、托盘退出、125% / 150% 缩放。证明日常办公可用。</td><td>1–2 人日</td></tr>
+<tr><td>② 完整拼写闭环</td><td>稳定词库导入、变体与短语判定、提示、错误重输、自动切题、断点继续；验证前缀变体和中文输入法。</td><td>2–3 人日</td></tr>
+<tr><td>③ 统计与复习</td><td>本地数据库、明确统计口径、错词 / 到期队列、导出与恢复；验证重复事件与异常退出。</td><td>2–3 人日</td></tr>
+<tr><td>④ 全量验收与打包</td><td>多屏 / 缩放 / 休眠恢复、快捷键冲突、真实工作软件切换、资源测量、免安装包检查。</td><td>1–2 人日</td></tr>
+</tbody></table></div>
+<p><strong>功能实现预计约 6–10 人日，词库处理与校对单独估算。</strong>755 条未直接匹配的例句应先按规则分组，再抽查约 200 条确认自动处理的可靠性，之后估计剩余人工工作量。功能开发和词库整理可以交错推进，但正式全量版本要对全部 3,674 词条交代去向与处理状态。</p>
+
+<h3>首版验收清单</h3>
+<ol>
+<li><strong>完整功能：</strong>小窗口、固定位置与置顶、全局显隐、中文与遮词例句、提示、正确自动切题、错误重输、统计、复习和重启恢复全部连通。</li>
+<li><strong>词库正确性：</strong>全部 3,674 个来源词条可追溯；70 个多形式词条、短语与连字符有针对性用例；4 条空例句补齐；755 条初筛异常全部分类处理，所有训练例句不直接露出目标答案。</li>
+<li><strong>输入边界：</strong>未输入完不报错；组合输入期间不切题；前缀变体规则已定稿；快速键入、按键重复、粘贴和多次 Enter 不导致跳过两题或重复记数。粘贴答对单独标注，不进入独立拼写正确率。</li>
+<li><strong>办公体验：</strong>工作软件有焦点时小窗不抢输入；隐藏不露出仍打开的统计 / 提示窗口；恢复保留题目与输入；热键冲突后仍可通过托盘操作；多屏拔插后窗口可找回。</li>
+<li><strong>数据与离线：</strong>断网可完成全部核心流程；重启不丢已保存进度；同一题事件不重复计数；隐藏期间不累计学习时长；备份可在另一目录恢复且记录一致。</li>
+<li><strong>性能目标：</strong>先以冷启动约 2 秒内、热键显隐约 100 ms 内、静置 5 分钟平均 CPU 低于 0.5%、练习态私有工作集优先控制在 100 MiB 内作为测量目标。需在你的电脑固定测量方法后验收，当前未测得这些指标。</li>
+</ol>
+<p>首版范围聚焦本地拼写。账号、云同步、移动端、听写语音、在线 AI 生成例句和真正的任务栏内嵌均不属于当前必要条件；将来需求明确后再评估。</p>
+</section>
+
+<section id="evidence">
+<h2>7. 本次已验证与仍待验证</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>已做</th><th>尚未做</th></tr></thead>
+<tbody><tr><td>读取参考会话；检查当前 OS、架构和既有 .NET Framework；核对微软及框架官方文档；固定源仓库提交；全量解析主词库并核对 ID、字段、数量、例句字面匹配与前缀组合；生成报告与审计记录。</td><td>没有开发或运行 WPF 程序；没有安装开发环境；没有逐条语义校对全词库；没有实测桌面焦点、DPI、多屏、快捷键与资源占用；没有进行 Windows 11 实机验证或软件部署。</td></tr></tbody>
+</table></div>
+<p><strong>建议进入“小窗口 + 快捷键 + 焦点”的最小桌面验证阶段。</strong>目前证据足以支持立项，但不足以承诺真实任务栏内嵌、全部例句无需处理，或已经达到性能指标。完整路线以当前电脑的可靠日常使用为验收依据。</p>
+</section>
+
+<footer>
+调研材料：用户引用会话“提取单词列表”、固定版本源数据与 README、微软 / Tauri / Electron 官方资料。所有链接均可从相应论述处打开。报告中的交互、尺寸、队列和工期为方案建议；词库数量与本机环境为本次检查结果。<br>
+本文件为可离线阅读、浏览器打印的静态 HTML 报告。布局示意不具备系统级置顶或全局快捷键能力，不代表桌面软件已经完成。
+</footer>
+</main>
+</body>
+</html>

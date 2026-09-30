@@ -1,0 +1,55 @@
+小词窗 — 第三方资料和依赖说明
+
+应用图标为本项目自行绘制的“窗口 + W”矢量标记，源文件 assets/logo.svg；多尺寸 ICO 和 PNG 由构建工具生成。图标不依赖外部图片或字体。透明悬浮窗通过 Windows 系统合成接口实现，技术参考与兼容范围见 VALIDATION.md。
+
+1. 词库资料
+
+项目：hefengxian/my-ielts
+项目页面：https://github.com/hefengxian/my-ielts
+固定提交：5cef573933663c4673c6e0093f1df04e68018b1a
+资料文件：src/pages/vocabulary/vocabulary.js
+固定来源：https://raw.githubusercontent.com/hefengxian/my-ielts/5cef573933663c4673c6e0093f1df04e68018b1a/src/pages/vocabulary/vocabulary.js
+SHA-256：e21e604c16c30f1310dc025ccf6e58b93f2f525b231735f0b27e093d5e0eb1ce
+
+上游自述内容为《雅思词汇真经》词汇资料；上游 README 明示：
+“禁止将本项目用于任何商业目的！！！”
+本次未发现上游单独的标准开源 LICENSE 文件。此说明不将仓库公开可访问解释为对教材内容的再许可。本程序随附的固定词库用于用户请求的本地个人学习，未进行公开或商业发布。资料相关权利属于相应权利人。
+
+本地加工：保留来源 ID、原释义和原例句；预生成遮词文本，校正列明的录入问题，部分缺失/异常例句以自拟句替换。新例句不宣称出自原书。词库作为固定资源 Vcrmb.vocabulary.json 嵌入 Vcrmb.Core.dll，不接受外部更新。内嵌词库对象中的 ExampleOrigin、OriginalExample、OriginalMeaning 和源码 data/corrections.json 可追溯这些处理。
+
+2. System.Data.SQLite
+
+版本：2.0.4，使用 NuGet 包内 net471/System.Data.SQLite.dll。
+来源：https://www.nuget.org/packages/System.Data.SQLite/2.0.4
+包元数据作者：System.Data.SQLite
+包元数据版权：Public Domain
+未修改提供程序二进制文件。
+
+3. SQLite
+
+版本：3.53.4，Windows x64 原生 DLL。
+来源：https://sqlite.org/2026/sqlite-dll-win-x64-3530400.zip
+版权说明：https://sqlite.org/copyright.html
+SQLite 原生库属于 public domain。
+原生 sqlite3.dll 按 System.Data.SQLite 2.x 的导入名复制为 e_sqlite3.dll；二进制内容未修改。
+
+4. Microsoft .NET Framework
+
+程序目标框架：.NET Framework 4.8；运行时由操作系统现有安装提供。
+构建参考程序集：Microsoft.NETFramework.ReferenceAssemblies.net48 1.0.3。
+包来源：https://www.nuget.org/packages/Microsoft.NETFramework.ReferenceAssemblies.net48/1.0.3
+包元数据版权：© Microsoft Corporation. All rights reserved.
+包指向许可：https://github.com/Microsoft/dotnet/blob/master/LICENSE
+参考程序集仅供构建，不包含在发行包中；发行包不捆绑 .NET 运行时安装器。
+
+固定版本、下载地址和哈希记录在源码 dependencies.json。2026-09-30 对 NuGet 元数据和原生 SQLite 官方下载校验进行了检查；这不构成对未来安全状态的保证。
+
+5. Inno Setup
+
+安装器使用 Inno Setup 7.1.0 x64 生成，安装引擎未修改，保留原有版权及网站信息。
+Copyright (C) 1997-2026 Jordan Russell. All rights reserved.
+Portions Copyright (C) 2000-2026 Martijn Laan. All rights reserved.
+项目及下载：https://jrsoftware.org/isdl.php
+许可：https://jrsoftware.org/files/is/license.txt
+固定发行：https://github.com/jrsoftware/issrc/releases/tag/is-7_1_0
+构建工具以 portable 模式存放在本地 .tools，不随程序安装到用户电脑；生成的 EXE 包含原始安装引擎。

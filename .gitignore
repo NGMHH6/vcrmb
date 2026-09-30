@@ -1,0 +1,27 @@
+# Downloaded tools, builds and local verification output
+/.tools/
+/artifacts/
+/build/
+/assets/app.ico
+/assets/logo.png
+
+# Local learning records and diagnostics
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite-journal
+*.log
+ui-state.json
+*.db-journal
+*.user
+*.suo
+*.db
+*.db-shm
+*.db-wal
+.vs/
+__pycache__/
+*.py[cod]
+*.exe
+*.dll
+*.pdb
+*.zip

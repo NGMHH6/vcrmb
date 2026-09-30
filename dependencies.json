@@ -1,0 +1,21 @@
+{
+  "checkedOn": "2026-09-30",
+  "packages": [
+    {"name":"System.Data.SQLite", "version":"2.0.4", "url":"https://api.nuget.org/v3-flatcontainer/system.data.sqlite/2.0.4/system.data.sqlite.2.0.4.nupkg", "archive":"system.data.sqlite.2.0.4.zip", "directory":"sqlite-provider", "sha256":"5d5aa9acf03599c0edfce25de9b4d10b3c40a1f2d551f4a91dddbccce58a2f59", "license":"Public Domain", "usage":"runtime", "audit":"NuGet catalog has no vulnerability or deprecation entry on check date; this is not a guarantee of no vulnerabilities."},
+    {"name":"SQLite native x64", "version":"3.53.4", "url":"https://sqlite.org/2026/sqlite-dll-win-x64-3530400.zip", "archive":"sqlite-native.zip", "directory":"sqlite-native", "sha256":"8b959b7eff4a81f6a62fc3468f9273e5cfe78d4a927e62215aed231b654fb104", "sha3_256":"deddee963c810d1eeac3ce5e15c7c41da21a1c54d7a39cf54fbf577d2f50de3a", "license":"Public Domain", "usage":"runtime", "audit":"Official stable release and SHA3-256 verified against sqlite.org/download.html."},
+    {"name":"Microsoft.NETFramework.ReferenceAssemblies.net48", "version":"1.0.3", "url":"https://api.nuget.org/v3-flatcontainer/microsoft.netframework.referenceassemblies.net48/1.0.3/microsoft.netframework.referenceassemblies.net48.1.0.3.nupkg", "archive":"net48.zip", "directory":"net48", "sha256":"8a7e348538e7eb91351696911689f49e3d4f63f8bab517432bbe159b8b1104a2", "license":"Microsoft .NET Library license (package license metadata)", "usage":"build-only"}
+  ],
+  "installer": {
+    "name": "Inno Setup x64",
+    "version": "7.1.0",
+    "url": "https://github.com/jrsoftware/issrc/releases/download/is-7_1_0/innosetup-7.1.0-x64.exe",
+    "archive": "innosetup-7.1.0-x64.exe",
+    "directory": "inno-7.1.0-x64",
+    "sha256": "0362a383ed217d4c4239b5933866dd96d3eb2102737da92f80f6057a4b40df2f",
+    "signer": "Pyrsys B.V.",
+    "license": "Inno Setup License",
+    "licenseUrl": "https://jrsoftware.org/files/is/license.txt",
+    "usage": "build-only; generated setup includes the original Inno Setup bootstrapper",
+    "audit": "Official immutable release SHA-256 and Authenticode publisher checked; portable compiler installation stays inside .tools."
+  }
+}
