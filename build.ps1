@@ -67,7 +67,7 @@ if ($Package -or $Installer) {
         Copy-Item -LiteralPath (Join-Path $taskOutput $taskName) -Destination $taskDistribution -Recurse
     }
     Copy-Item -LiteralPath (Join-Path $taskRoot 'README.md'),(Join-Path $taskRoot 'THIRD-PARTY-NOTICES.txt'),(Join-Path $taskRoot 'dependencies.json') -Destination $taskDistribution
-    Copy-Item -LiteralPath (Join-Path $taskRoot 'reports\restart-shortcut-validation-2026-09-30.md') -Destination (Join-Path $taskDistribution 'VALIDATION.md')
+    Copy-Item -LiteralPath (Join-Path $taskRoot 'reports\automatic-text-validation-2026-10-08.md') -Destination (Join-Path $taskDistribution 'VALIDATION.md')
     $taskManifest = @(Get-ChildItem -LiteralPath $taskDistribution -File -Recurse | Sort-Object FullName | ForEach-Object {
         [ordered]@{ path = $_.FullName.Substring($taskDistribution.Length + 1); sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }
     })

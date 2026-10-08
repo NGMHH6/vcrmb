@@ -160,6 +160,7 @@ namespace Vcrmb.Desktop
                 hintUsed = session.Current != null && session.Current.HintUsed,
                 background = settings.Backdrop, effectiveBackground = backdrop.EffectiveMode, backdropFailure = backdrop.Failure,
                 backgroundOpacity = settings.BackdropOpacity, darkAppearance = settings.DarkAppearance,
+                automaticTextRunning = backdrop.AutomaticText.Running, automaticTextFailure = backdrop.AutomaticText.Failure,
                 feedbackVisible = feedback.IsVisible || (surface.Hint.Text.Length > 0 && meaning.IsVisible), inputBorder = answer.BorderThickness.ToString(),
                 pendingConfirmation = HasActiveRound && AnswerRules.IsCorrect(session.Word, answer.Text)
                     && !AnswerRules.CanAutoComplete(session.Word, answer.Text),

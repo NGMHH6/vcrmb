@@ -24,14 +24,22 @@ namespace Vcrmb.Desktop
         private double regionScale;
         internal string EffectiveMode { get; private set; }
         internal string Failure { get; private set; }
+        internal AutomaticTextContrast AutomaticText { get; private set; }
 
         internal WindowBackdrop(Window window, PracticeSurface surface)
         {
             this.window = window; this.surface = surface;
+            AutomaticText = new AutomaticTextContrast(window, surface);
             window.Closed += OnClosed;
         }
 
         internal void Apply(AppSettings settings)
+        {
+            try { ApplyBackdrop(settings); }
+            finally { AutomaticText.SetEnabled(EffectiveMode == "clear" && handle != IntPtr.Zero); }
+        }
+
+        private void ApplyBackdrop(AppSettings settings)
         {
             handle = new WindowInteropHelper(window).Handle;
             bool highContrast = SystemParameters.HighContrast;
@@ -60,7 +68,11 @@ namespace Vcrmb.Desktop
             uint color = ((uint)Math.Max((byte)1, opacity) << 24) | ((uint)tint.B << 16) | ((uint)tint.G << 8) | tint.R;
             if (settings.Backdrop == "clear")
             {
-                if (SetAccent(2, 0)) { EffectiveMode = "clear"; surface.Background = new SolidColorBrush(Color.FromArgb(1, tint.R, tint.G, tint.B)); }
+                if (SetAccent(2, 0))
+                {
+                    EffectiveMode = "clear"; surface.Background = new SolidColorBrush(Color.FromArgb(1, tint.R, tint.G, tint.B));
+                    surface.SetTheme(true, false, true);
+                }
             }
             else if (SetAccent(4, color))
             {
@@ -126,6 +138,7 @@ namespace Vcrmb.Desktop
 
         public void Dispose()
         {
+            AutomaticText.Dispose();
             window.Closed -= OnClosed;
             if (regionUpdate != null) { regionUpdate.Abort(); regionUpdate = null; }
             if (nativeSource != null && !nativeSource.IsDisposed) nativeSource.RemoveHook(WindowMessage);

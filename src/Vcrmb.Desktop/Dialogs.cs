@@ -115,7 +115,8 @@ namespace Vcrmb.Desktop
                 SelectedIndex = settings.Backdrop == "clear" ? 1 : settings.Backdrop == "solid" ? 2 : 0, MinHeight = 30,
                 Margin = new Thickness(0, 0, 0, 14) };
             System.Windows.Automation.AutomationProperties.SetName(background, "悬浮窗背景"); appearance.Children.Add(background);
-            CheckBox dark = new CheckBox { Content = "深色外观（使用浅色文字）", IsChecked = settings.DarkAppearance,
+            CheckBox dark = new CheckBox { Content = "深色外观（磨砂玻璃 / 纯色）", IsChecked = settings.DarkAppearance,
+                Visibility = background.SelectedIndex == 1 ? Visibility.Collapsed : Visibility.Visible,
                 Margin = new Thickness(0, 3, 0, 15) }; appearance.Children.Add(dark);
             CheckBox caretBlink = new CheckBox { Content = "光标闪动", IsChecked = settings.CaretBlinkEnabled,
                 Margin = new Thickness(0, 3, 0, 6) };
@@ -126,8 +127,12 @@ namespace Vcrmb.Desktop
                 TickFrequency = 5, IsSnapToTickEnabled = true, Margin = new Thickness(0, 4, 0, 10), IsEnabled = background.SelectedIndex == 0 };
             System.Windows.Automation.AutomationProperties.SetName(opacity, "磨砂浓度"); appearance.Children.Add(opacity);
             opacity.ValueChanged += delegate { density.Text = "磨砂浓度 " + opacity.Value.ToString("0") + "%"; };
-            background.SelectionChanged += delegate { opacity.IsEnabled = background.SelectedIndex == 0; };
-            appearance.Children.Add(Ui.Text("全透明会去掉背景，只保留释义、例句和输入文字。深色桌面可选择深色外观，让浅色文字更清楚。", 12));
+            background.SelectionChanged += delegate
+            {
+                opacity.IsEnabled = background.SelectedIndex == 0;
+                dark.Visibility = background.SelectedIndex == 1 ? Visibility.Collapsed : Visibility.Visible;
+            };
+            appearance.Children.Add(Ui.Text("全透明时自动识别后方画面的明暗，深色背景用浅色字，浅色背景用深色字，无需手动切换。磨砂玻璃和纯色可通过深色外观切换配色。", 12));
             appearance.Children.Add(Ui.Text("悬浮窗没有图标和工具栏，拖动中文释义可移动。输入区没有方框，主动提示或回车答错时显示答案。", 12));
 
             StackPanel shortcuts = new StackPanel { Margin = new Thickness(14, 10, 14, 8) };

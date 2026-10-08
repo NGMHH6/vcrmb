@@ -79,7 +79,7 @@ internal static class PresentationTests
             Assert(Math.Abs(surface.ActualHeight - cleanHeight) < 1, "Hidden prompt still reserves empty space.");
             surface.SetTheme(true, false); surface.Background = new SolidColorBrush(Color.FromRgb(28, 36, 34));
             Render(surface, "dark.png");
-            surface.SetTheme(false, false); surface.Background = new SolidColorBrush(Color.FromArgb(1, 244, 248, 246));
+            surface.SetTheme(true, false, true); surface.Background = new SolidColorBrush(Color.FromArgb(1, 244, 248, 246));
             Render(surface, "clear.png");
             Assert(surface.Opacity == 1 && surface.Answer.Opacity == 1 && surface.Meaning.Opacity == 1, "Transparency faded foreground text.");
             surface.SetTheme(false, true); Assert(surface.Answer.Foreground == SystemColors.WindowTextBrush, "High contrast not respected.");
@@ -103,6 +103,7 @@ internal static class PresentationTests
         GroupSettingsTests.RunAll(Run, args[0]);
         SubmissionTests.RunAll(Run, args[0]);
         CaretTests.RunAll(Run, args[0]);
+        AutomaticTextTests.RunAll(Run);
         File.WriteAllText(Path.Combine(args[0], "presentation-test-results.json"), new JavaScriptSerializer().Serialize(new {
             utc = DateTime.UtcNow.ToString("o"), passed = results.Count - failed, failed = failed, tests = results }), Encoding.UTF8);
         Console.WriteLine("Presentation result: " + (results.Count - failed) + " passed, " + failed + " failed.");

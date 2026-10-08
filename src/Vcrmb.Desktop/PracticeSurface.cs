@@ -23,6 +23,8 @@ namespace Vcrmb.Desktop
         private readonly Run meaningText;
         private readonly Run hintSeparator;
         private readonly TextBlock status;
+        internal FrameworkElement[] ContrastRegions
+        { get { return new FrameworkElement[] { meaningHost, (FrameworkElement)Example.Parent, InputRow, feedbackHost }; } }
         private Brush ink;
         private Brush muted;
         private Brush accent;
@@ -71,16 +73,37 @@ namespace Vcrmb.Desktop
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Focusable = false };
         }
 
-        internal void SetTheme(bool dark, bool highContrast)
+        internal void SetTheme(bool dark, bool highContrast, bool clearBackground = false)
         {
+            // 全透明使用单层字色；主题变化只更新显示，不清除正在作答的状态。
             ink = highContrast ? SystemColors.WindowTextBrush : Brush(dark ? "#F3F7F6" : "#202C2A");
             muted = highContrast ? SystemColors.WindowTextBrush : Brush(dark ? "#D0DAD7" : "#52615D");
             accent = highContrast ? SystemColors.HighlightBrush : Brush(dark ? "#A7E8CE" : "#126651");
             error = highContrast ? SystemColors.WindowTextBrush : Brush(dark ? "#FFABAD" : "#AD303A");
-            Meaning.Foreground = ink; Example.Foreground = muted; Answer.Foreground = ink;
+            Meaning.Foreground = ink; Example.Foreground = clearBackground ? ink : muted; Answer.Foreground = ink;
             Answer.SelectionBrush = accent; Answer.SelectionOpacity = 0.3;
             Hint.Foreground = accent; Feedback.Foreground = error;
-            ClearStatus();
+            RefreshStatusColor();
+        }
+
+        internal void SetAutomaticContrast(bool meaningDark, bool exampleDark, bool answerDark, bool feedbackDark)
+        {
+            Meaning.Foreground = Brush(meaningDark ? "#F3F7F6" : "#202C2A");
+            Hint.Foreground = Brush(meaningDark ? "#A7E8CE" : "#126651");
+            Example.Foreground = Brush(exampleDark ? "#F3F7F6" : "#202C2A");
+            ink = Brush(answerDark ? "#F3F7F6" : "#202C2A");
+            accent = Brush(answerDark ? "#A7E8CE" : "#126651");
+            error = Brush(answerDark ? "#FFABAD" : "#AD303A");
+            Answer.Foreground = ink; Answer.SelectionBrush = accent;
+            Feedback.Foreground = Brush(feedbackDark ? "#FFABAD" : "#AD303A");
+            RefreshStatusColor();
+        }
+
+        private void RefreshStatusColor()
+        {
+            if (status.Visibility != Visibility.Visible) return;
+            status.Foreground = status.Text == "✓" ? accent : error;
+            InputRow.BorderBrush = status.Foreground;
         }
 
         internal void ClearStatus()

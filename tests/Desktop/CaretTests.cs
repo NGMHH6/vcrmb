@@ -64,6 +64,8 @@ internal static class CaretTests
                 stage = "changing theme and mode";
                 surface.SetTheme(true, false); Drain(30);
                 Assert(caret.Background == answer.Foreground && answer.CaretBrush == Brushes.Transparent, "Theme reset the static caret color or mode.");
+                surface.SetTheme(true, false, true); Drain(30); CheckCaret(answer, caret);
+                surface.SetTheme(false, false, true); Drain(30); CheckCaret(answer, caret);
                 surface.SetTheme(false, true); Drain(30); CheckCaret(answer, caret);
                 Assert(caret.Background == SystemColors.WindowTextBrush, "High contrast caret color was not preserved.");
                 answer.CaretBlinkEnabled = true; Drain(30);
